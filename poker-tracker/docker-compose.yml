@@ -1,4 +1,3 @@
-version: "3.8"
 
 # Poker Tracker — app + db only.
 # Nginx lives in /opt/proxy and proxies here via proxy-net.
