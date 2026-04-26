@@ -139,7 +139,17 @@ curl -I https://poker.equityrange.com
 3. **Issue the SSL certificate:**
    ```bash
    cd /opt/proxy
-   ./init-ssl.sh equityrange.com your@email.com
+   docker run --rm \
+     -v /opt/proxy/certbot/conf:/etc/letsencrypt \
+     -v /opt/proxy/certbot/www:/var/www/certbot \
+     certbot/certbot certonly --webroot \
+     -w /var/www/certbot \
+     -d equityrange.com \
+     -d www.equityrange.com \
+     --email your@email.com \
+     --agree-tos \
+     --no-eff-email
+   docker exec proxy-nginx nginx -s reload
    ```
 
 4. **Test:**
@@ -173,11 +183,25 @@ rm -rf /opt/poker-tracker-new
 ## Adding a New Site Later
 
 1. **DNS:** Add A record for `newproject.equityrange.com` → VPS IP
+   > ⚠️ If using Cloudflare: set the record to **DNS only (grey cloud)** during cert issuance. You can re-enable proxying after.
 2. **Nginx conf:** Copy `_template.conf.example` → `conf.d/newproject.conf`, replace `NEWPROJECT`
-3. **SSL:** `cd /opt/proxy && ./init-ssl.sh newproject.equityrange.com your@email.com`
-4. **App:** Create `/opt/newproject/`, write a `docker-compose.yml` that joins `proxy-net` and exposes the right port
-5. **Restart app:** `docker compose up -d` in the app directory
-6. **Done** — nginx picks up the new conf automatically after the cert step reloads it
+3. **SSL:** Run certbot directly:
+   ```bash
+   docker run --rm \
+     -v /opt/proxy/certbot/conf:/etc/letsencrypt \
+     -v /opt/proxy/certbot/www:/var/www/certbot \
+     certbot/certbot certonly --webroot \
+     -w /var/www/certbot \
+     -d newproject.equityrange.com \
+     --email your@email.com \
+     --agree-tos \
+     --no-eff-email
+   docker exec proxy-nginx nginx -s reload
+   ```
+4. **Static files** (if static site): copy to `/opt/<newproject>/html/`, add volume mount to proxy compose
+5. **App** (if backend): create `/opt/<newproject>/`, write a `docker-compose.yml` that joins `proxy-net`
+6. **Start app:** `docker compose up -d` in the app directory
+7. **Done**
 
 ---
 
