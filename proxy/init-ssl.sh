@@ -30,8 +30,11 @@ if [ "$DOMAIN" = "equityrange.com" ]; then
 fi
 
 echo "==> Requesting certificate for ${DOMAIN}..."
-docker compose run --rm certbot \
-  certonly --webroot \
+# Run certbot directly (not via compose run) to avoid entrypoint conflicts
+docker run --rm \
+  -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
+  -v "$(pwd)/certbot/www:/var/www/certbot" \
+  certbot/certbot certonly --webroot \
   -w /var/www/certbot \
   -d "${DOMAIN}" ${EXTRA_DOMAINS} \
   --email "${EMAIL}" \
@@ -39,7 +42,7 @@ docker compose run --rm certbot \
   --no-eff-email
 
 echo "==> Reloading nginx..."
-docker compose exec nginx nginx -s reload
+docker exec proxy-nginx nginx -s reload
 
 echo ""
 echo "✅ Certificate issued for ${DOMAIN}"
