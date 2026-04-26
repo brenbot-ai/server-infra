@@ -1,5 +1,3 @@
-version: "3.8"
-
 # Shared reverse proxy — owns ports 80 & 443 for ALL sites on this server.
 # All app stacks must join the external "proxy-net" network to be reachable.
 
@@ -43,5 +41,5 @@ services:
 
 networks:
   proxy-net:
+    external: true
     name: proxy-net
-    driver: bridge
