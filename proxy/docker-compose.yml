@@ -1,0 +1,47 @@
+version: "3.8"
+
+# Shared reverse proxy — owns ports 80 & 443 for ALL sites on this server.
+# All app stacks must join the external "proxy-net" network to be reachable.
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: proxy-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+      # Auth files for password-protected sites (e.g. poker tracker)
+      # Copy .htpasswd files here as needed — see site-specific conf comments
+      - ./auth:/etc/nginx/auth:ro
+      # Static sites served directly by nginx (no app container needed)
+      - /opt/equityrange/html:/var/www/equityrange:ro
+    networks:
+      - proxy-net
+    command: /bin/sh -c "nginx -g 'daemon off;'"
+
+  certbot:
+    image: certbot/certbot
+    container_name: proxy-certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    # Renew every 12 hours; certbot only acts when cert is within 30 days of expiry
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+        while :; do
+          certbot renew --webroot -w /var/www/certbot --quiet;
+          sleep 12h & wait $${!};
+        done"
+    networks:
+      - proxy-net
+
+networks:
+  proxy-net:
+    name: proxy-net
+    driver: bridge
