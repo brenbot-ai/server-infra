@@ -1,0 +1,51 @@
+version: "3.8"
+
+# Poker Tracker — app + db only.
+# Nginx lives in /opt/proxy and proxies here via proxy-net.
+
+services:
+  app:
+    build: .
+    container_name: poker-tracker-app
+    restart: unless-stopped
+    # No ports exposed to host — nginx reaches us via Docker network
+    expose:
+      - "3000"
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - proxy-net
+      - internal
+
+  db:
+    image: postgres:16-alpine
+    container_name: poker-tracker-db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB:       ${DB_NAME}
+      POSTGRES_USER:     ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+volumes:
+  pgdata:
+
+networks:
+  # Shared network — proxy-nginx routes traffic here
+  proxy-net:
+    external: true
+    name: proxy-net
+  # Internal-only network — db not reachable from outside this stack
+  internal:
+    driver: bridge
