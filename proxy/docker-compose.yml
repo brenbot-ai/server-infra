@@ -18,6 +18,8 @@ services:
       - ./auth:/etc/nginx/auth:ro
       # Static sites served directly by nginx (no app container needed)
       - /opt/equityrange/html:/var/www/equityrange:ro
+      - /opt/centlivrebeer/html:/var/www/centlivrebeer:ro
+      - /opt/bwlegacyfarms/html:/var/www/bwlegacyfarms:ro
     networks:
       - proxy-net
     command: /bin/sh -c "nginx -g 'daemon off;'"
